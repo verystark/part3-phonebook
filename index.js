@@ -1,7 +1,10 @@
+require('dotenv').config()
+
 const express = require('express')
 const morgan = require('morgan')
 const app = express()
 const cors = require('cors')
+const Phonenumber = require('./models/person')
 
 app.use(cors())
 app.use(express.json())
@@ -41,7 +44,9 @@ let persons = [
 ]
 
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+  Phonenumber.find({}).then(person => {
+    response.json(person)
+  })
 })
 
 app.get('/info', (request, response) => {
@@ -88,14 +93,18 @@ app.post('/api/persons', (request, response) => {
         error: 'name must be unique'
       })
     } else {
-      persons = persons.concat(person)
+        const phoneNumber = new Phonenumber({
+          name: person.name,
+          number: person.number,
+        })
+        phoneNumber.save().then(savedNumber => {
+          response.json(savedNumber)
+        })
     }
   }
-  
-  response.json(person)
 })
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`)
   morgan('tiny')
