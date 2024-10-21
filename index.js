@@ -4,6 +4,7 @@ const express = require('express')
 const morgan = require('morgan')
 const app = express()
 const cors = require('cors')
+
 const Phonenumber = require('./models/person')
 
 app.use(cors())
@@ -49,39 +50,38 @@ app.get('/api/persons', (request, response) => {
   })
 })
 
-app.get('/info', (request, response) => {
-  response.send(`
-    Phonebook has info for ${persons.length} people <br/>
-    ${Date()}
-    `)
+app.get('/info', (request, response, next) => {
+  Phonenumber.countDocuments({})
+    .then(people => {
+      response.send(`
+        Phonebook has info for ${people} people <br/>
+        ${Date()}
+      `)
+    })
 })
 
-app.get('/api/persons/:id', (request, response) => {
-  const id = request.params.id
-  const person = persons.find(name => name.id === id)
-
-  if (person) {
-    response.json(person)
-  } else {
-    response.status(404).end()
-  }
+app.get('/api/persons/:id', (request, response, next) => {
+  Phonenumber.findById(request.params.id)
+    .then(person => {
+      if (person) {
+        response.json(person)
+      } else {
+        response.status(404).end()
+      }
+    })
+    .catch(error => next(error))
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-  const id = request.params.id
-  persons = persons.filter(person => person.id !== id)
-
-  response.status(204).end()
+app.delete('/api/persons/:id', (request, response, next) => {
+  Phonenumber.findByIdAndDelete(request.params.id)
+    .then(result => { 
+      response.status(204).end()
+    })
+    .catch(error => next(error))
 })
-
-const generateId = () => {
-  const id = Math.floor(Math.random() * 1000)
-  return String(id)
-}
 
 app.post('/api/persons', (request, response) => {  
   const person = request.body
-  person.id = generateId()
 
   if (!person.name || !person.number) {
     return response.status(400).json({
@@ -103,6 +103,33 @@ app.post('/api/persons', (request, response) => {
     }
   }
 })
+
+app.put('/api/persons/:id', (req, res, next) => {
+  const body = req.body
+
+  phoneNumber = {
+    name: body.name,
+    number: body.number,
+  }
+
+  Phonenumber.findByIdAndUpdate(req.params.id, phoneNumber, { new: true })
+    .then(updatedNumber => {
+      res.json(updatedNumber)
+    })
+    .catch(error => next(error))
+})
+
+const errorHandler = (error, request, response, next) => {
+  console.log(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  }
+
+  next(error)
+}
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {
