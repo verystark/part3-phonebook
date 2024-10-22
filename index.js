@@ -80,39 +80,34 @@ app.delete('/api/persons/:id', (request, response, next) => {
     .catch(error => next(error))
 })
 
-app.post('/api/persons', (request, response) => {  
+app.post('/api/persons', (request, response, next) => {  
   const person = request.body
 
-  if (!person.name || !person.number) {
-    return response.status(400).json({
-      error: 'content missing'
+  if (persons.find(name => name.name === person.name)) {
+    return response.status(409).json({
+      error: 'name must be unique'
     })
   } else {
-    if (persons.find(name => name.name === person.name)) {
-      return response.status(409).json({
-        error: 'name must be unique'
+      const phoneNumber = new Phonenumber({
+        name: person.name,
+        number: person.number,
       })
-    } else {
-        const phoneNumber = new Phonenumber({
-          name: person.name,
-          number: person.number,
-        })
-        phoneNumber.save().then(savedNumber => {
-          response.json(savedNumber)
-        })
-    }
+      phoneNumber.save().then(savedNumber => {
+        response.json(savedNumber)
+      })
+      .catch(error => next(error))
   }
+  
 })
 
 app.put('/api/persons/:id', (req, res, next) => {
-  const body = req.body
+  const { name, number } = req.body
 
-  phoneNumber = {
-    name: body.name,
-    number: body.number,
-  }
-
-  Phonenumber.findByIdAndUpdate(req.params.id, phoneNumber, { new: true })
+  Phonenumber.findByIdAndUpdate(
+    req.params.id,
+    { name, number },
+    { new: true, runValidators: true, context: 'query' }
+  )
     .then(updatedNumber => {
       res.json(updatedNumber)
     })
@@ -124,6 +119,8 @@ const errorHandler = (error, request, response, next) => {
 
   if (error.name === 'CastError') {
     return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
   }
 
   next(error)
