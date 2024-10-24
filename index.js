@@ -1,5 +1,4 @@
 require('dotenv').config()
-
 const express = require('express')
 const morgan = require('morgan')
 const app = express()
@@ -21,36 +20,13 @@ morgan.token('text', (req) => {
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :text'))
 
-let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
-
 app.get('/api/persons', (request, response) => {
   Phonenumber.find({}).then(person => {
     response.json(person)
   })
 })
 
-app.get('/info', (request, response, next) => {
+app.get('/info', (request, response) => {
   Phonenumber.countDocuments({})
     .then(people => {
       response.send(`
@@ -74,30 +50,22 @@ app.get('/api/persons/:id', (request, response, next) => {
 
 app.delete('/api/persons/:id', (request, response, next) => {
   Phonenumber.findByIdAndDelete(request.params.id)
-    .then(result => { 
+    .then(() => {
       response.status(204).end()
     })
     .catch(error => next(error))
 })
 
-app.post('/api/persons', (request, response, next) => {  
+app.post('/api/persons', (request, response, next) => {
   const person = request.body
-
-  if (persons.find(name => name.name === person.name)) {
-    return response.status(409).json({
-      error: 'name must be unique'
-    })
-  } else {
-      const phoneNumber = new Phonenumber({
-        name: person.name,
-        number: person.number,
-      })
-      phoneNumber.save().then(savedNumber => {
-        response.json(savedNumber)
-      })
-      .catch(error => next(error))
-  }
-  
+  const phoneNumber = new Phonenumber({
+    name: person.name,
+    number: person.number,
+  })
+  phoneNumber.save().then(savedNumber => {
+    response.json(savedNumber)
+  })
+    .catch(error => next(error))
 })
 
 app.put('/api/persons/:id', (req, res, next) => {
